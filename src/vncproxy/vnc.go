@@ -24,14 +24,15 @@ type VncConfiguration struct {
 
 // VncSession manages VNC and related X server instances
 type VncSession struct {
-	Config     VncConfiguration      // The configuration of the
-	display    string                // The X display for the session
-	localPort  int                   // The local port of the associated vnc server
-	authSocket string                // Tbe auth socket for the X server
-	xserver    *exec.Cmd             // Pointer to the X server shell command
-	vncserver  *exec.Cmd             // Poiner to the VNC server shell command
-	events     chan VncSessionEvent  // A channel to broadcast state changes of the VncSession
-	Callback   func(VncSessionEvent) // Callback function to react to state changes
+	Config      VncConfiguration      // The configuration of the
+	display     string                // The X display for the session
+	localPort   int                   // The local port of the associated vnc server
+	localPortV6 int                   // The local port for IP V6 communication
+	authSocket  string                // Tbe auth socket for the X server
+	xserver     *exec.Cmd             // Pointer to the X server shell command
+	vncserver   *exec.Cmd             // Poiner to the VNC server shell command
+	events      chan VncSessionEvent  // A channel to broadcast state changes of the VncSession
+	Callback    func(VncSessionEvent) // Callback function to react to state changes
 }
 
 // VncSessionEvent is used to send state-change events
@@ -46,21 +47,12 @@ const (
 	VncSessionEventListenerSet VncSessionEvent = iota
 )
 
-// VncSessionEventListener implements communication pattern to respond to state changes
-// in the VncSession (e.g., unexpected closure of the X or VNC server)
-type VncSessionEventListener interface {
-	XServerStarted(display string)
-	XServerStopped()
-	VncServerStarted(port int)
-	VncServerStopped()
-}
-
 // NewVncConfiguration creates a default VNC configuration
 func NewVncConfiguration() VncConfiguration {
 
 	return VncConfiguration{
 		XserverCmdTemplate:   "/usr/bin/X -displayfd {{.Config.DisplayFd}} -auth {{.AuthSocket}}",
-		VncServerCmdTemplate: "/usr/bin/x11vnc -xkb -noxrecord -noxfixes -noxdamage -rfbport {{.VncPort}} -display :{{.Display}} -auth {{.AuthSocket}} -ncache 10 -o /var/log/vnc-{{.Display}}",
+		VncServerCmdTemplate: "/usr/bin/x11vnc -xkb -noxrecord -noxfixes -noxdamage -rfbport {{.VncPort}} -rfbportv6 {{.VncPortV6}} -display :{{.Display}} -auth {{.AuthSocket}} -ncache 10 -o /var/log/vnc-{{.Display}}",
 		DisplayFd:            6,
 	}
 
@@ -157,6 +149,11 @@ func (s *VncSession) AuthSocket() string {
 // VncPort returns the port at which the VNC server is listening
 func (s *VncSession) VncPort() int {
 	return s.localPort
+}
+
+// VncPortV6 returns the port at which the VNC server is listening for IP V6 traffic
+func (s *VncSession) VncPortV6() int {
+	return s.localPortV6
 }
 
 // ****************************************************************************
@@ -283,11 +280,24 @@ func (s *VncSession) createAndStartVncServer() error {
 
 	// Find a free port to use for communication
 	// TODO: This will enable direct communication from the outside. Maybe better to use sockets
-	port, err := freeport.GetFreePort()
-	if err != nil {
-		return err
+	{
+		port, err := freeport.GetFreePort()
+		if err != nil {
+			return err
+		}
+		s.localPort = port
 	}
-	s.localPort = port
+	// Find a free port to use for communication using IP V6
+	// There is a bug in libvncserver that requires configuring a free port for V6
+	// even if it is not used
+	// https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=735648
+	{
+		port, err := freeport.GetFreePort()
+		if err != nil {
+			return err
+		}
+		s.localPortV6 = port
+	}
 
 	// Start VNC server
 	s.vncserver = exec.Command("/bin/sh", "-c", s.getVncServerCmd())

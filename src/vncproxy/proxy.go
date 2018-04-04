@@ -112,6 +112,7 @@ func (p *Server) handleConn(conn net.Conn) {
 	}
 
 	// Set the proxy Target to the VNC server port
+	//laddr, err := net.ResolveTCPAddr("tcp", ":"+strconv.Itoa(vnc.VncPort()))
 	laddr, err := net.ResolveTCPAddr("tcp", ":"+strconv.Itoa(vnc.VncPort()))
 	if err != nil {
 		fmt.Println("VNC Server address unresolvable: " + ":" + strconv.Itoa(vnc.VncPort()))
@@ -180,7 +181,7 @@ func (p *Server) handleConn(conn net.Conn) {
 			pipeMux.Unlock()
 		}()
 
-		buff := make([]byte, 256)
+		buff := make([]byte, 65535)
 		for !p.Terminator() {
 			src.SetReadDeadline(time.Now().Add(10 * time.Second))
 			n, err := src.Read(buff)
