@@ -102,7 +102,7 @@ func (p *Server) serve(ln net.Listener) {
 
 // handleConn handles connection.
 func (p *Server) handleConn(conn net.Conn) {
-	fmt.Println("Incomming connection from " + p.Target.String())
+	fmt.Println("Incomming connection from " + p.Addr.String())
 
 	vnc := NewVncSession()
 	if err := vnc.Start(); err != nil {
@@ -151,15 +151,13 @@ func (p *Server) handleConn(conn net.Conn) {
 
 	// Manage termination of pipe if VNC state becomes unhealthy
 	var stopPipe = false
-	vnc.Callback = func(ev VncSessionEvent) {
+	vnc.SetCallback(func(ev VncSessionEvent) {
 		switch ev {
-		case VncSessionXServerStopped:
-			stopPipe = true
 		case VncSessionVncServerStopped:
 			stopPipe = true
 		default:
 		}
-	}
+	})
 	p.Terminator = func() bool {
 		return stopPipe
 	}
@@ -173,6 +171,7 @@ func (p *Server) handleConn(conn net.Conn) {
 			pipeMux.Lock()
 			// if first pipe to end, closing conn will end the other pipe.
 			if !pipeDone {
+				fmt.Println("Closing pipe " + p.Addr.String() + "<->" + p.Target.String())
 				conn.Close()
 				rconn.Close()
 				vnc.Close()
@@ -204,6 +203,7 @@ func (p *Server) handleConn(conn net.Conn) {
 		}
 	}
 
+	fmt.Println("Initiating pipe " + p.Addr.String() + "<->" + p.Target.String())
 	go pipe(conn, rconn, p.Director)
 	go pipe(rconn, conn, nil)
 }
