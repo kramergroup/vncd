@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -112,14 +113,14 @@ func (s *FallbackVncSession) Close() {
 
 	// Stop the VNC server
 	if s.vncserver != nil {
-		if err := s.vncserver.Process.Kill(); err != nil {
+		if err := syscall.Kill(-s.vncserver.Process.Pid, syscall.SIGKILL); err != nil {
 			fmt.Println("Could not kill VNC server: " + err.Error())
 		}
 	}
 
 	// Stop the X server
 	if s.xserver != nil {
-		if err := s.xserver.Process.Kill(); err != nil {
+		if err := syscall.Kill(-s.xserver.Process.Pid, syscall.SIGKILL); err != nil {
 			fmt.Println("Could not kill X server: " + err.Error())
 		}
 	}
@@ -175,6 +176,8 @@ func (s *FallbackVncSession) createAndStartXServer() error {
 
 	// Start X server
 	s.xserver = exec.Command("/bin/sh", "-c", s.getXServerCmd())
+	s.xserver.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	if err := s.xserver.Start(); err != nil {
 		fmt.Println("Error starting X server: " + err.Error())
 		return err
@@ -297,6 +300,8 @@ func (s *FallbackVncSession) createAndStartVncServer() error {
 
 	// Start VNC server
 	s.vncserver = exec.Command("/bin/sh", "-c", s.getVncServerCmd())
+	s.vncserver.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	if err := s.vncserver.Start(); err != nil {
 		fmt.Println("Error starting VNC server: " + err.Error())
 		return err

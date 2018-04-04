@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"syscall"
 
 	"github.com/phayes/freeport"
 )
@@ -74,7 +75,7 @@ func (s *DefaultVncSession) Close() {
 
 	// Stop the VNC server
 	if s.vncserver != nil {
-		if err := s.vncserver.Process.Kill(); err != nil {
+		if err := syscall.Kill(-s.vncserver.Process.Pid, syscall.SIGKILL); err != nil {
 			fmt.Println("Could not kill VNC server: " + err.Error())
 		}
 	}
@@ -130,6 +131,8 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 		strconv.Itoa(s.localPort),
 		strconv.Itoa(s.localPortV6))
 
+	s.vncserver.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	if err := s.vncserver.Start(); err != nil {
 		fmt.Println("Error starting VNC server: " + err.Error())
 		return err
@@ -141,7 +144,7 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 	// Listen for termination of the X server and broadcast
 	go func() {
 		s.vncserver.Wait()
-		fmt.Println("VNC server stopped")
+		fmt.Println("VNC server on port " + strconv.Itoa(s.VncPort()) + " stopped")
 		s.callback(VncSessionVncServerStopped)
 	}()
 
