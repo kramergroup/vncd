@@ -2,10 +2,10 @@
 
 Vncd provides functionality similar to inetd for VNC in container environments.
 The daemon listens for VNC connections and spans a new x11vnc instance for each
-request.
+request allowing for multiple *independent* users accessing the same container.
 
-  This software is in alpha state and under development. Many thing, particularly
-  documentation are not up-to-date.
+   This software is in alpha state and under development. Many thing, particularly
+   documentation are not up-to-date.
 
 ## Usage
 
