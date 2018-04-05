@@ -1,1 +1,3 @@
 bin
+release/*.zip
+release/*.tar*
