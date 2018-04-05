@@ -76,7 +76,7 @@ func (s *DefaultVncSession) Close() {
 
 	// Stop the VNC server
 	if s.vncserver != nil {
-		if err := syscall.Kill(-s.vncserver.Process.Pid, syscall.SIGKILL); err != nil {
+		if err := syscall.Kill(-s.vncserver.Process.Pid, syscall.SIGTERM); err != nil {
 			fmt.Println("Could not kill VNC server: " + err.Error())
 		}
 	}
@@ -132,7 +132,9 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 		strconv.Itoa(s.localPort),
 		strconv.Itoa(s.localPortV6))
 
-	s.vncserver.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	s.vncserver.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 
 	if err := s.vncserver.Start(); err != nil {
 		fmt.Println("Error starting VNC server: " + err.Error())
@@ -140,7 +142,6 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 	}
 
 	fmt.Println("VNC server will listen on port " + strconv.Itoa(s.VncPort()))
-	go s.callback(VncSessionVncServerStarted)
 
 	// Listen for termination of the X server and broadcast
 	go func() {
@@ -148,6 +149,17 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 		fmt.Println("VNC server on port " + strconv.Itoa(s.VncPort()) + " stopped")
 		s.callback(VncSessionVncServerStopped)
 	}()
+
+	if s.bootstrapFileExists() {
+		bootstrapCmd := exec.Command(s.bootstrap)
+		bootstrapCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := bootstrapCmd.Run(); err != nil {
+			fmt.Println("Error starting VNC server: " + err.Error())
+			return err
+		}
+	}
+
+	go s.callback(VncSessionVncServerStarted)
 
 	return nil
 
@@ -158,5 +170,10 @@ func (s *DefaultVncSession) createAndStartVncServer() error {
 // ****************************************************************************
 func (s *DefaultVncSession) scriptFileExists() bool {
 	_, err := os.Stat(s.shellScript)
+	return !os.IsNotExist(err)
+}
+
+func (s *DefaultVncSession) bootstrapFileExists() bool {
+	_, err := os.Stat(s.bootstrap)
 	return !os.IsNotExist(err)
 }
