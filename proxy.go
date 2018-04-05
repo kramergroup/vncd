@@ -2,6 +2,7 @@ package vncd
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -26,6 +27,8 @@ type Server struct {
 	// Terminator returns true if the communication should be terminated
 	Terminator func() bool
 
+	VncSessionFactory func() VncSession
+
 	// If config is not nil, the proxy connects to the target address and then
 	// initiates a TLS handshake.
 	Config *tls.Config
@@ -38,17 +41,22 @@ type Server struct {
 
 // NewServer created a new proxy which sends all packet to target. The function dir
 // intercept and can change the packet before sending it to the target.
-func NewServer(target *net.TCPAddr, dir func(*[]byte), config *tls.Config) *Server {
+func NewServer(dir func(*[]byte), vnc func() VncSession, config *tls.Config) (*Server, error) {
 
 	p := &Server{
-		Target:   target,
-		Director: dir,
-		Config:   config,
+		Director:          dir,
+		Config:            config,
+		VncSessionFactory: vnc,
 		Terminator: func() bool {
 			return false
 		},
 	}
-	return p
+
+	var err error
+	if vnc == nil {
+		err = errors.New("VNC session factory method must not be nil")
+	}
+	return p, err
 }
 
 // ListenAndServe listens on the TCP network address laddr and then handle packets
@@ -104,7 +112,8 @@ func (p *Server) serve(ln net.Listener) {
 func (p *Server) handleConn(conn net.Conn) {
 	fmt.Println("Incomming connection from " + p.Addr.String())
 
-	vnc := NewVncSession()
+	var vnc VncSession
+	vnc = p.VncSessionFactory()
 	if err := vnc.Start(); err != nil {
 		fmt.Println("Error starting VNC environment")
 		conn.Close()
