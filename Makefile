@@ -32,7 +32,7 @@ create-release:
 	cd release/vncd-${VERSION} && zip ../vncd-${VERSION}.zip *
 	cd release/vncd-${VERSION} && tar cvzf ../vncd-${VERSION}.tar.gz *
 	rm -rf release/vncd-${VERSION}
-	curl --user ${GITHUB_USER} -H "Content-Type: application/json" -X POST -d @release.json ${GITHUB_API}/releases
+	curl --user ${GITHUB_USER} -H "Content-Type: application/json" -X POST -d @release/release.json ${GITHUB_API}/releases
 
 .PHONY: upload-release
 upload-release: VERSION=$(shell jq -r .tag_name release/release.json)
