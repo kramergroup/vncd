@@ -1,4 +1,4 @@
-package vncproxy
+package vncd
 
 import (
 	"crypto/tls"

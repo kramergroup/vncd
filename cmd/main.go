@@ -9,7 +9,7 @@ import (
 	"net"
 	"os"
 
-	"vncproxy"
+	"github.com/kramergroup/vncd"
 )
 
 var (
@@ -43,9 +43,9 @@ func main() {
 	var p = new(vncproxy.Server)
 	if *remoteTLS {
 		// Testing only. You needs to specify config.ServerName insteand of InsecureSkipVerify
-		p = vncproxy.NewServer(raddr, nil, &tls.Config{InsecureSkipVerify: true})
+		p = vncd.NewServer(raddr, nil, &tls.Config{InsecureSkipVerify: true})
 	} else {
-		p = vncproxy.NewServer(raddr, nil, nil)
+		p = vncd.NewServer(raddr, nil, nil)
 	}
 
 	fmt.Println("Proxying from " + laddr.String() + " to " + p.Target.String())
