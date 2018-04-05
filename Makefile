@@ -38,7 +38,7 @@ create-release:
 upload-release: VERSION=$(shell jq -r .tag_name release/release.json)
 upload-release: ID=$(shell curl https://api.github.com/repos/kramergroup/vncd/releases\?tag_name\=v0.1.0 | jq '.[0].id')
 upload-release:
-	curl --user ${GITHUB_USER} -H "Content-Type: application/zip" -X POST --data-binary "@release/vncd-${VERSION}.zip" \
+	curl --user ${GITHUB_USER} -H "Content-Type: application/zip" -X POST --data-binary "@release/vncd-${VERSION}.tar.gz" \
 			https://uploads.github.com/repos/kramergroup/vncd/releases/${ID}/assets?name=vncd-${VERSION}.tar.gz
 	curl --user ${GITHUB_USER} -H "Content-Type: application/tar+gzip" -X POST --data-binary "@release/vncd-${VERSION}.tar.gz" \
 		  https://uploads.github.com/repos/kramergroup/vncd/releases/${ID}/assets?name=vncd-${VERSION}.zip
