@@ -1,6 +1,19 @@
 package main
 
-// This code comes from https://github.com/kahlys/proxy
+/*
+ 	VNCD is a proxy for long sessions. It is intended as a
+	multiplexer for internet services.
+
+	Function:
+	The multiplexer listen on a port for incoming connections.
+	When a connection is establised, the multiplexer calls a
+	factory function to obtain a handling service. This is normally
+	intended to be a docker container exposing an internet service
+	at a predefined port. The mux then acts as proxy between the
+	incomming connection and the backend.
+
+  This code is based on code from https://github.com/kahlys/proxy
+*/
 
 import (
 	"crypto/tls"
@@ -29,11 +42,13 @@ var (
 	backendFactory func() (backends.Backend, error)
 )
 
+// Config holds to global configuration of the proxy
 type Config struct {
 	Frontend FrontendConfig `yaml:"Frontend"`
 	Backend  BackendConfig  `yaml:"Backend"`
 }
 
+// FrontendConfig contains the front-end related configuration
 type FrontendConfig struct {
 	Port      int    `yaml:"Port"`
 	TLS       bool   `yaml:"TLS"`
@@ -42,6 +57,11 @@ type FrontendConfig struct {
 	RemoteTLS bool   `yaml:"RemoteTLS"`
 }
 
+// BackendConfig holds backend configurartion
+// Currently, this is a union of configurartion variables
+// of ALL backend implementations to keep things simple
+// TODO Find a better way to separate out backend
+//      configurations for different backends
 type BackendConfig struct {
 	Type string `yaml:"Type"`
 
@@ -92,6 +112,8 @@ func main() {
 	}
 }
 
+// processConfig reads configuration variables from a global
+// configuration file (provided via the -config commandline parameter)
 func processConfig(configFile string) {
 
 	yamlFile, err := ioutil.ReadFile(configFile)
@@ -118,6 +140,7 @@ func processConfig(configFile string) {
 
 }
 
+// exists is a small helper rerturning true if a file exists
 func exists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
