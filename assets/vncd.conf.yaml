@@ -1,0 +1,6 @@
+Frontend:
+  Port: 59000
+Backend:
+  Type: "docker"
+  Image: "vnc-centos"
+  Port: 5900
