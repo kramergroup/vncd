@@ -42,6 +42,10 @@ type Server struct {
 
 	// Pipe termination channels
 	sigs map[chan<- os.Signal]struct{}
+
+	// accepting monitors the state of the server and returns true if new
+	// connections can be established
+	accepting bool
 }
 
 // NewServer created a new proxy which sends all packet to target. The function dir
@@ -105,11 +109,17 @@ func (p *Server) serve(ln net.Listener) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
+	p.accepting = true
+	defer func() {
+		p.accepting = false
+	}()
+
 	for {
 		type accepted struct {
 			conn net.Conn
 			err  error
 		}
+
 		c := make(chan accepted, 1)
 		go func() {
 			conn, err := ln.Accept()
@@ -146,6 +156,17 @@ func (p *Server) serve(ln net.Listener) {
 			return
 		}
 	}
+}
+
+// AcceptingConnections returns true if the server is ready to accept new
+// connections.
+func (p *Server) AcceptingConnections() bool {
+	return p.accepting
+}
+
+// CountOpenConnections returns the number of open, monitored connections
+func (p *Server) CountOpenConnections() int {
+	return len(p.sigs)
 }
 
 // handleConn handles connection.

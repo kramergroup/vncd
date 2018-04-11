@@ -17,10 +17,12 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
 
 	"github.com/kramergroup/vncd"
@@ -50,11 +52,12 @@ type Config struct {
 
 // FrontendConfig contains the front-end related configuration
 type FrontendConfig struct {
-	Port      int    `yaml:"Port"`
-	TLS       bool   `yaml:"TLS"`
-	Cert      string `yaml:"Cert"`
-	Key       string `yaml:"Key"`
-	RemoteTLS bool   `yaml:"RemoteTLS"`
+	Port       int    `yaml:"Port"`
+	HealthPort int    `yaml:"HealthPort"`
+	TLS        bool   `yaml:"TLS"`
+	Cert       string `yaml:"Cert"`
+	Key        string `yaml:"Key"`
+	RemoteTLS  bool   `yaml:"RemoteTLS"`
 }
 
 // BackendConfig holds backend configurartion
@@ -91,11 +94,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if exists(*configFile) {
-		processConfig(*configFile)
-	} else {
-		fmt.Println("Configuration file " + *configFile + " does not exists")
-	}
 	var p = new(vncd.Server)
 
 	if config.Frontend.RemoteTLS {
@@ -105,12 +103,17 @@ func main() {
 		p, err = vncd.NewServer(nil, backendFactory, nil)
 	}
 
+	if config.Frontend.HealthPort != 0 {
+		go reportHealth(p)
+	}
+
 	fmt.Println("Listening on " + laddr.String() + " for incomming connections")
 	if config.Frontend.TLS {
 		p.ListenAndServeTLS(laddr, config.Frontend.Cert, config.Frontend.Key)
 	} else {
 		p.ListenAndServe(laddr)
 	}
+
 }
 
 // processConfig reads configuration variables from a global
@@ -139,6 +142,44 @@ func processConfig(configFile string) {
 		os.Exit(1)
 	}
 
+}
+
+type healthHandler struct {
+	Server *vncd.Server
+}
+
+func (h healthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	type Status struct {
+		Acceptingconnections bool `json:"accepting"`
+		Numberofconnections  int  `json:"open"`
+	}
+
+	s := Status{
+		Acceptingconnections: h.Server.AcceptingConnections(),
+		Numberofconnections:  h.Server.CountOpenConnections(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s)
+	if !s.Acceptingconnections {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+	fmt.Println("Handled health check")
+}
+
+func reportHealth(srv *vncd.Server) {
+
+	haddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", config.Frontend.HealthPort))
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println("Listening for health check requests on " + haddr.String())
+	err = http.ListenAndServe(haddr.String(), healthHandler{
+		Server: srv,
+	})
 }
 
 // exists is a small helper rerturning true if a file exists

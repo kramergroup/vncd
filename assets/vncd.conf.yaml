@@ -4,6 +4,11 @@ Frontend:
   # The frontend listens on port for incomming connections
   Port: 5900
 
+  # The container port that provides health endpoint
+  # The endpoint expects a simple HTTP GET request and
+  # returns some basic statistics
+  HealthPort: 9999
+  
 # Backend related parameters
 Backend:
   # The backend type. Can be [docker]
