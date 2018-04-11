@@ -13,4 +13,4 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o vncd .
 FROM scratch
 COPY --from=builder /go/src/github.com/kramergroup/vncd/cmd/vncd /vncd
 COPY assets/vncd.conf.yaml /etc/vncd.conf.yaml
-CMD ["/vncd"]
+ENTRYPOINT ["/vncd"]
