@@ -1,0 +1,17 @@
+# Frontend related parameters
+Frontend:
+
+  # The frontend listens on port for incomming connections
+  Port: 5900
+
+# Backend related parameters
+Backend:
+  # The backend type. Can be [docker]
+  Type: "docker"
+
+  # The image used as backing server
+  Image: "kramergroup/vnc-centos"
+
+  # The container port where the server is listening
+  # This is the port inside the container
+  Port: 5900
