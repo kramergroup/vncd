@@ -66,8 +66,9 @@ type BackendConfig struct {
 	Type string `yaml:"Type"`
 
 	// Type Docker fields
-	Port  int    `yaml:"Port"`
-	Image string `yaml:"Image"`
+	Port    int    `yaml:"Port"`
+	Image   string `yaml:"Image"`
+	Network string `yaml:"Network"`
 }
 
 func main() {
@@ -131,7 +132,7 @@ func processConfig(configFile string) {
 	case "docker":
 		backendFactory = func() (backends.Backend, error) {
 			fmt.Println("Creating Docker backend with image " + config.Backend.Image)
-			return backends.CreateDockerBackend(config.Backend.Image, config.Backend.Port)
+			return backends.CreateDockerBackend(config.Backend.Image, config.Backend.Port, config.Backend.Network)
 		}
 	default:
 		fmt.Println("Unknown backend type: " + config.Backend.Type)
