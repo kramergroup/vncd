@@ -44,9 +44,10 @@ var (
 			HealthPort: flag.Int("healthPort", *defaultConfig.Frontend.HealthPort, "health endpoint address"),
 		},
 		Backend: BackendConfig{
-			Port:  flag.Int("backendPort", 5900, "backend address"),
-			Type:  flag.String("backendType", "docker", "backend type"),
-			Image: flag.String("backendImage", "kramergroup/vnc-centos", "backend address"),
+			Port:    flag.Int("backendPort", *defaultConfig.Backend.Port, "backend address"),
+			Type:    flag.String("backendType", *defaultConfig.Backend.Type, "backend type"),
+			Image:   flag.String("backendImage", *defaultConfig.Backend.Image, "backend address"),
+			Network: flag.String("backendNetwork", *defaultConfig.Backend.Network, "backend network"),
 		},
 	}
 	backendFactory func() (backends.Backend, error)
@@ -144,8 +145,8 @@ func processConfig() {
 	switch *config.Backend.Type {
 	case "docker":
 		backendFactory = func() (backends.Backend, error) {
-			fmt.Println("Creating Docker backend with image " + *config.Backend.Image)
-			return backends.CreateDockerBackend(*config.Backend.Image, *config.Backend.Port, *config.Backend.Network)
+			fmt.Println("Creating Docker backend with image " + *(config.Backend.Image))
+			return backends.CreateDockerBackend(*(config.Backend.Image), *(config.Backend.Port), *(config.Backend.Network))
 		}
 	default:
 		fmt.Println("Unknown backend type: " + *config.Backend.Type)

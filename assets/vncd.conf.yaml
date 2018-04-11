@@ -37,3 +37,6 @@ Backend:
   # The container port where the server is listening
   # This is the port inside the container
   Port: 5900
+
+  # Name of the isolating docker network
+  Network: ""
