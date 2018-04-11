@@ -85,6 +85,8 @@ type BackendConfig struct {
 func main() {
 	flag.Parse()
 
+	processConfig()
+
 	laddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", *config.Frontend.Port))
 	if err != nil {
 		fmt.Println(err.Error())
