@@ -55,7 +55,7 @@ var (
 			Kubeconfig:    flag.String("kubeconfig", *defaultConfig.Backend.Network, "Location of the kubeconfig file"),
 			LabelSelector: flag.String("labelSelector", *defaultConfig.Backend.LabelSelector, "Label selector for pods"),
 			Namespace:     flag.String("namespace", *defaultConfig.Backend.Namespace, "Namespace for pods"),
-			Dispose:       flag.String("dispose", *defaultConfig.Backend.Dispose, "Dispose pods after use"),
+			Dispose:       flag.Bool("dispose", *defaultConfig.Backend.Dispose, "Dispose pods after use"),
 		},
 	}
 	backendFactory func() (backends.Backend, error)
@@ -183,7 +183,8 @@ func processConfig() {
 			}
 
 			clientset, err := kubernetes.NewForConfig(conf)
-			return backends.CreateKubernetesBackend(clientset, *(config.Backend.Namespace), *(config.Backend.LabelSelector), *(config.Backend.Port))
+			log.Fatalf("Could not initialise Kubernetes configuration [%s]", err)
+			return backends.CreateKubernetesBackend(clientset, *(config.Backend.Namespace), *(config.Backend.LabelSelector), *(config.Backend.Port), *(config.Backend.Dispose))
 		}
 	default:
 		fmt.Println("Unknown backend type: " + *config.Backend.Type)
