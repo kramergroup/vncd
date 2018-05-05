@@ -27,12 +27,13 @@ type KubernetesBackend struct {
 	nameSpace     string         // The namespace of the pod handling the connection
 	containerPort int            // The port at which the container is listening
 	clientset     *k8s.Clientset // The k8s client
+	dispose       bool           // Dispose pods after use
 }
 
 // CreateKubernetesBackend creates a KubernetesBackend to handle requests. It searches
 // the provided 'namespace' for a pod matching 'label' and without 'podAnnotationLock'.
 // It then sets the lock to indicate that this pod is currently handling a connection.
-func CreateKubernetesBackend(clientset *k8s.Clientset, namespace string, labelSelector string, containerPort int) (Backend, error) {
+func CreateKubernetesBackend(clientset *k8s.Clientset, namespace string, labelSelector string, containerPort int, dispose bool) (Backend, error) {
 
 	// Find a suitable pod
 	podList, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: labelSelector})
@@ -54,6 +55,7 @@ func CreateKubernetesBackend(clientset *k8s.Clientset, namespace string, labelSe
 				nameSpace:     pod.ObjectMeta.Namespace,
 				containerPort: containerPort,
 				clientset:     clientset,
+				dispose:       dispose,
 			}, nil
 		}
 	}
@@ -78,12 +80,20 @@ func (b *KubernetesBackend) Terminate() {
 		fmt.Printf("Error releasing pod lock. Cannot find pod [%s] in namespace [%s]", b.podName, b.nameSpace)
 		return
 	}
-	delete(pod.ObjectMeta.Annotations, podAnnotationLock)
-	_, err = b.clientset.CoreV1().Pods(b.nameSpace).Update(pod)
-	if err != nil {
-		fmt.Println("Error updating pod " + b.podName + " in namespace " + b.nameSpace)
+	if b.dispose {
+		if err = b.clientset.CoreV1().Pods(b.nameSpace).Delete(b.podName, &metav1.DeleteOptions{}); err != nil {
+			fmt.Printf("Error deleting pod [%s] in namespace [%s] - [%s]", b.podName, b.nameSpace, err.Error())
+			return
+		}
+		fmt.Printf("Disposed of pod [%s] in namespace [%s]\n", b.podName, b.nameSpace)
+	} else {
+		delete(pod.ObjectMeta.Annotations, podAnnotationLock)
+		_, err = b.clientset.CoreV1().Pods(b.nameSpace).Update(pod)
+		if err != nil {
+			fmt.Println("Error updating pod " + b.podName + " in namespace " + b.nameSpace)
+		}
+		fmt.Printf("Released lock from pod [%s] in namespace [%s]\n", b.podName, b.nameSpace)
 	}
-	fmt.Printf("Released lock from pod [%s] in namespace [%s]\n", b.podName, b.nameSpace)
 }
 
 func (b *KubernetesBackend) getPod() (*v1.Pod, error) {

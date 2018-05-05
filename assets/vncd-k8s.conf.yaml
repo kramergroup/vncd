@@ -45,6 +45,11 @@ Backend:
   # This is the port inside the container
   Port: 5900
 
+  # Dispose pods after use - If true, pods are deleted after
+  # they have handled a connection. This relies on Kubernetes
+  # to manage the number of available pods eg. via Deployments
+  Dispose: true
+
   # Unused in kubernetes
   Image: ""
   Network: ""

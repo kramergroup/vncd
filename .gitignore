@@ -1,3 +1,4 @@
 bin
 release/*.zip
 release/*.tar*
+cmd/vncd

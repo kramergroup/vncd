@@ -55,6 +55,7 @@ var (
 			Kubeconfig:    flag.String("kubeconfig", *defaultConfig.Backend.Network, "Location of the kubeconfig file"),
 			LabelSelector: flag.String("labelSelector", *defaultConfig.Backend.LabelSelector, "Label selector for pods"),
 			Namespace:     flag.String("namespace", *defaultConfig.Backend.Namespace, "Namespace for pods"),
+			Dispose:       flag.String("dispose", *defaultConfig.Backend.Dispose, "Dispose pods after use"),
 		},
 	}
 	backendFactory func() (backends.Backend, error)
@@ -95,6 +96,7 @@ type BackendConfig struct {
 	LabelSelector *string `yaml:"LabelSelector"`
 	Namespace     *string `yaml:"Namespace"`
 	Kubeconfig    *string `yaml:"Kubeconfig"`
+	Dispose       *bool   `yaml:"Dispose"`
 }
 
 func main() {
