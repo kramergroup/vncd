@@ -183,7 +183,9 @@ func processConfig() {
 			}
 
 			clientset, err := kubernetes.NewForConfig(conf)
-			log.Fatalf("Could not initialise Kubernetes configuration [%s]", err)
+			if err != nil {
+				log.Fatalf("Could not initialise Kubernetes configuration [%s]", err)
+			}
 			return backends.CreateKubernetesBackend(clientset, *(config.Backend.Namespace), *(config.Backend.LabelSelector), *(config.Backend.Port), *(config.Backend.Dispose))
 		}
 	default:
