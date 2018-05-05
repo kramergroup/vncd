@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -28,6 +29,9 @@ import (
 	"github.com/kramergroup/vncd"
 	"github.com/kramergroup/vncd/backends"
 	yaml "gopkg.in/yaml.v2"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -44,10 +48,13 @@ var (
 			HealthPort: flag.Int("healthPort", *defaultConfig.Frontend.HealthPort, "health endpoint address"),
 		},
 		Backend: BackendConfig{
-			Port:    flag.Int("backendPort", *defaultConfig.Backend.Port, "backend address"),
-			Type:    flag.String("backendType", *defaultConfig.Backend.Type, "backend type"),
-			Image:   flag.String("backendImage", *defaultConfig.Backend.Image, "backend address"),
-			Network: flag.String("backendNetwork", *defaultConfig.Backend.Network, "backend network"),
+			Port:          flag.Int("backendPort", *defaultConfig.Backend.Port, "backend address"),
+			Type:          flag.String("backendType", *defaultConfig.Backend.Type, "backend type"),
+			Image:         flag.String("backendImage", *defaultConfig.Backend.Image, "backend address"),
+			Network:       flag.String("backendNetwork", *defaultConfig.Backend.Network, "backend network"),
+			Kubeconfig:    flag.String("kubeconfig", *defaultConfig.Backend.Network, "Location of the kubeconfig file"),
+			LabelSelector: flag.String("labelSelector", *defaultConfig.Backend.LabelSelector, "Label selector for pods"),
+			Namespace:     flag.String("namespace", *defaultConfig.Backend.Namespace, "Namespace for pods"),
 		},
 	}
 	backendFactory func() (backends.Backend, error)
@@ -75,12 +82,19 @@ type FrontendConfig struct {
 // TODO Find a better way to separate out backend
 //      configurations for different backends
 type BackendConfig struct {
+
+	// Common fields
 	Type *string `yaml:"Type"`
+	Port *int    `yaml:"Port"`
 
 	// Type Docker fields
-	Port    *int    `yaml:"Port"`
 	Image   *string `yaml:"Image"`
 	Network *string `yaml:"Network"`
+
+	// Kubernetes fields
+	LabelSelector *string `yaml:"LabelSelector"`
+	Namespace     *string `yaml:"Namespace"`
+	Kubeconfig    *string `yaml:"Kubeconfig"`
 }
 
 func main() {
@@ -147,6 +161,27 @@ func processConfig() {
 		backendFactory = func() (backends.Backend, error) {
 			fmt.Println("Creating Docker backend with image " + *(config.Backend.Image))
 			return backends.CreateDockerBackend(*(config.Backend.Image), *(config.Backend.Port), *(config.Backend.Network))
+		}
+	case "kubernetes":
+		backendFactory = func() (backends.Backend, error) {
+			fmt.Printf("Createing Kubernetes backend with label selector [%s] in namespace [%s]\n", *(config.Backend.LabelSelector), *(config.Backend.Namespace))
+
+			var conf *rest.Config
+			var err error
+			if *config.Backend.Kubeconfig == "" {
+				conf, err = rest.InClusterConfig()
+				if err != nil {
+					log.Fatalf("Could not build Kubernetes configuration [%s]", err)
+				}
+			} else {
+				conf, err = clientcmd.BuildConfigFromFlags("", *config.Backend.Kubeconfig)
+				if err != nil {
+					log.Fatalf("Could not build Kubernetes configuration [%s]", err)
+				}
+			}
+
+			clientset, err := kubernetes.NewForConfig(conf)
+			return backends.CreateKubernetesBackend(clientset, *(config.Backend.Namespace), *(config.Backend.LabelSelector), *(config.Backend.Port))
 		}
 	default:
 		fmt.Println("Unknown backend type: " + *config.Backend.Type)

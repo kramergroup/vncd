@@ -199,7 +199,13 @@ func (p *Server) handleConn(conn net.Conn) {
 	}
 
 	// Set the proxy Target to the backend
-	p.Target = backend.GetTarget()
+	target, err := backend.GetTarget()
+	if err != nil {
+		fmt.Printf("Could not obtain target tcp address [%s]\n", err.Error())
+		conn.Close()
+		return
+	}
+	p.Target = target
 
 	// connects to VNC server - try for 5 seconds to give time for VNC to come up
 	var rconn net.Conn

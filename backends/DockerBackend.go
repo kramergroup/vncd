@@ -41,8 +41,8 @@ type DockerBackend struct {
 */
 
 // GetTarget returns the internet address of the backing container
-func (b *DockerBackend) GetTarget() *net.TCPAddr {
-	return &b.target
+func (b *DockerBackend) GetTarget() (*net.TCPAddr, error) {
+	return &b.target, nil
 }
 
 // Terminate removes the backing container
@@ -168,7 +168,8 @@ func CreateDockerBackend(image string, port int, network string) (Backend, error
 		}
 		b.target = *addr
 	}
-	fmt.Println("Container listining on " + b.GetTarget().String())
+	tgt, _ := b.GetTarget()
+	fmt.Printf("Container listining on %s", tgt.String())
 
 	// Start a watcher to remove container if proxy is killed
 	// sigs := make(chan os.Signal, 1)

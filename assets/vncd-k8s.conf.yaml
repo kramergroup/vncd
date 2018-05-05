@@ -1,0 +1,50 @@
+# This is a default configuration file for vncd
+#
+# Please uncomment as required. Note that parameters can be overwritten
+# on the command-line
+#
+# Frontend related parameters
+Frontend:
+
+  # The frontend listens on port for incomming connections
+  Port: 5900
+
+  # The container port that provides health endpoint
+  # The endpoint expects a simple HTTP GET request and
+  # returns some basic statistics
+  HealthPort: 9999
+
+  # Should the frontend use TLS
+  TLS: false
+
+  # The TLS key file
+  Key: ""
+
+  # The TLS cert file
+  Cert: ""
+
+  # Secure communication with backend using TLS
+  RemoteTLS: false
+
+# Backend related parameters
+Backend:
+  # The backend type. Can be [docker,kubernetes]
+  Type: "kubernetes"
+
+  # The label selector used to find pods
+  LabelSelector: "app=vnc-alpine"
+
+  # Namespace of considered pods
+  Namespace: "default"
+
+  # Location of the kubeconfig file for out-of-cluster operation
+  # Leave empty for in-cluster operation
+  Kubeconfig: ""
+
+  # The container port where the server is listening
+  # This is the port inside the container
+  Port: 5900
+
+  # Unused in kubernetes
+  Image: ""
+  Network: ""
