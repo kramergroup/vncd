@@ -35,7 +35,7 @@ import (
 )
 
 var (
-	configFile    = "/etc/vncd.conf.yaml"
+	configFile    = "/etc/vncd/vncd.conf.yaml"
 	defaultConfig = readConfigFile(configFile)
 
 	config = Config{
