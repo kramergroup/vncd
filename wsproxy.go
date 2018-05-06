@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/websocket"
@@ -105,7 +107,13 @@ func (p *WebsocketServer) relayHandler(ws *websocket.Conn) {
 	go copyWorker(ws, conn, doneCh)
 	go copyWorker(conn, ws, doneCh)
 
-	<-doneCh
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case <-doneCh:
+	case <-sigs:
+	}
 	log.Println("Closing websocket pipe to " + target.String())
 	conn.Close()
 	ws.Close()
@@ -169,13 +177,6 @@ func (p *WebsocketServer) createBackend() (*backends.Backend, error) {
 }
 
 func copyWorker(dst net.Conn, src net.Conn, doneCh chan<- bool) {
-
-	for {
-		_, err := io.Copy(dst, src)
-		if err != nil {
-			log.Printf(err.Error())
-			break
-		}
-	}
+	io.Copy(dst, src)
 	doneCh <- true
 }
