@@ -170,15 +170,6 @@ func CreateDockerBackend(image string, port int, network string) (Backend, error
 
 	fmt.Println("Container listining on " + b.target.String())
 
-	// Start a watcher to remove container if proxy is killed
-	// sigs := make(chan os.Signal, 1)
-	// signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	// go func() {
-	// 	for b.containerRunning {
-	// 		<-sigs
-	// 		b.Terminate()
-	// 	}
-	// }()
 	return b, nil
 }
 
