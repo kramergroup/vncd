@@ -32,7 +32,7 @@ Backend:
   Type: "docker"
 
   # The image used as backing server
-  Image: "kramergroup/vnc-centos"
+  Image: "kramergroup/vnc-alpine"
 
   # The container port where the server is listening
   # This is the port inside the container
@@ -40,3 +40,9 @@ Backend:
 
   # Name of the isolating docker network
   Network: ""
+
+  # Unused
+  Kubeconfig: ""
+  LabelSelector: ""
+  Namespace: ""
+  Dispose: true

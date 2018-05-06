@@ -8,7 +8,8 @@ RUN go get -d -v github.com/docker/docker/api \
                  k8s.io/client-go/rest \
                  k8s.io/client-go/tools/clientcmd \
                  k8s.io/apimachinery/pkg/apis/meta/v1 \
-                 k8s.io/api/core/v1 && \
+                 k8s.io/api/core/v1 \
+                 golang.org/x/net/websocket && \
     rm -rf /go/src/github.com/docker/docker/vendor/github.com/docker/go-connections/nat
 
 COPY . .

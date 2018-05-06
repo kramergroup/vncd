@@ -46,6 +46,7 @@ var (
 			Key:        flag.String("key", *defaultConfig.Frontend.Key, "proxy key x509 file for tls/ssl use"),
 			RemoteTLS:  flag.Bool("remotetls", *defaultConfig.Frontend.RemoteTLS, "tls/ssl between proxy and VNC server"),
 			HealthPort: flag.Int("healthPort", *defaultConfig.Frontend.HealthPort, "health endpoint address"),
+			WebSocket:  flag.Int("websocket", 80, "Websocket frontend port"),
 		},
 		Backend: BackendConfig{
 			Port:          flag.Int("backendPort", *defaultConfig.Backend.Port, "backend address"),
@@ -75,6 +76,7 @@ type FrontendConfig struct {
 	Cert       *string `yaml:"Cert"`
 	Key        *string `yaml:"Key"`
 	RemoteTLS  *bool   `yaml:"RemoteTLS"`
+	WebSocket  *int    `yaml:"Websocket"`
 }
 
 // BackendConfig holds backend configurartion
@@ -104,6 +106,13 @@ func main() {
 
 	processConfig()
 
+	term := make(chan bool)
+	go startProxy(&config, term)
+	go startWebsocketProxy(&config, term)
+	<-term
+}
+
+func startProxy(config *Config, term chan<- bool) {
 	laddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", *config.Frontend.Port))
 	if err != nil {
 		fmt.Println(err.Error())
@@ -124,17 +133,32 @@ func main() {
 		p, err = vncd.NewServer(nil, backendFactory, nil)
 	}
 
-	if *config.Frontend.HealthPort != 0 {
-		go reportHealth(p)
-	}
-
-	fmt.Println("Listening on " + laddr.String() + " for incomming connections")
+	// Start normal proxy
+	log.Printf("Listening on %s for incomming tcp connections", laddr.String())
 	if *config.Frontend.TLS {
 		p.ListenAndServeTLS(laddr, *config.Frontend.Cert, *config.Frontend.Key)
 	} else {
 		p.ListenAndServe(laddr)
 	}
+	term <- true
+}
 
+func startWebsocketProxy(config *Config, term chan<- bool) {
+
+	laddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", *config.Frontend.WebSocket))
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	var p = new(vncd.WebsocketServer)
+
+	p, err = vncd.NewWebsocketServer(backendFactory)
+
+	wsPort := fmt.Sprintf(":%d", *config.Frontend.WebSocket)
+	log.Printf("Listening on %s for incomming websocket connections\n", wsPort)
+	p.ListenAndServe(laddr)
+	term <- true
 }
 
 // readConfigFile reads configuration variables from a global
@@ -161,12 +185,12 @@ func processConfig() {
 	switch *config.Backend.Type {
 	case "docker":
 		backendFactory = func() (backends.Backend, error) {
-			fmt.Println("Creating Docker backend with image " + *(config.Backend.Image))
+			log.Println("Creating Docker backend with image " + *(config.Backend.Image))
 			return backends.CreateDockerBackend(*(config.Backend.Image), *(config.Backend.Port), *(config.Backend.Network))
 		}
 	case "kubernetes":
 		backendFactory = func() (backends.Backend, error) {
-			fmt.Printf("Createing Kubernetes backend with label selector [%s] in namespace [%s]\n", *(config.Backend.LabelSelector), *(config.Backend.Namespace))
+			log.Printf("Createing Kubernetes backend with label selector [%s] in namespace [%s]\n", *(config.Backend.LabelSelector), *(config.Backend.Namespace))
 
 			var conf *rest.Config
 			var err error
@@ -223,11 +247,11 @@ func reportHealth(srv *vncd.Server) {
 
 	haddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", *config.Frontend.HealthPort))
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 		os.Exit(1)
 	}
 
-	fmt.Println("Listening for health check requests on " + haddr.String())
+	log.Println("Listening for health check requests on " + haddr.String())
 	err = http.ListenAndServe(haddr.String(), healthHandler{
 		Server: srv,
 	})

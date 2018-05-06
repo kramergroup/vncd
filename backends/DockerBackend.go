@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"strconv"
@@ -168,8 +167,8 @@ func CreateDockerBackend(image string, port int, network string) (Backend, error
 		}
 		b.target = *addr
 	}
-	tgt, _ := b.GetTarget()
-	fmt.Printf("Container listining on %s", tgt.String())
+
+	fmt.Println("Container listining on " + b.target.String())
 
 	// Start a watcher to remove container if proxy is killed
 	// sigs := make(chan os.Signal, 1)
@@ -201,8 +200,8 @@ func (b *DockerBackend) pullImage() error {
 		}
 	}()
 
-	out, err := b.cli.ImagePull(b.ctx, b.Image, types.ImagePullOptions{})
-	io.Copy(os.Stdout, out)
+	_, err := b.cli.ImagePull(b.ctx, b.Image, types.ImagePullOptions{})
+	//io.Copy(os.Stdout, out)
 	pullCh <- (err == nil)
 
 	return err
