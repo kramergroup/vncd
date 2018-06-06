@@ -45,6 +45,9 @@ func CreateKubernetesBackend(clientset *k8s.Clientset, namespace string, labelSe
 			continue // This pod is locked - move on
 		} else {
 			// Found a pod to handle the connection. Lock it and store info in KubernetesBackend
+			if pod.Annotations == nil {
+				pod.Annotations = make(map[string]string)
+			}
 			pod.Annotations[podAnnotationLock] = "yes"
 			_, err = clientset.CoreV1().Pods(namespace).Update(&pod)
 			if err != nil {
